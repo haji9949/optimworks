@@ -1,0 +1,98 @@
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Scanner;
+
+public class RestaurantFinder {
+
+    public static void main(String[] args) {
+        // Create a scanner for user input
+        Scanner scanner = new Scanner(System.in);
+        
+        // Prompt user for the CSV file name
+        System.out.print("Enter the CSV file name (including .csv): ");
+        String csvFile = scanner.nextLine().trim();
+        
+        // Prompt user for food items
+        System.out.print("Enter food item names separated by spaces: ");
+        String foodItems = scanner.nextLine().trim();
+        
+        // Find and display the minimum price restaurant
+        String result = findMinPriceRestaurant(csvFile, foodItems);
+        System.out.println(result);
+        
+        // Close the scanner
+        scanner.close();
+    }
+
+    public static String findMinPriceRestaurant(String csvFile, String foodItems) {
+        Map<String, Map<String, Double>> restaurantData = new HashMap<>();
+        String[] foodItemsList = foodItems.split(" ");
+
+        // Read the CSV file and populate the restaurant data
+        try (BufferedReader br = new BufferedReader(new FileReader(csvFile))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] values = line.split(",");
+                if (values.length < 3) {
+                    continue; // Skip invalid lines
+                }
+                
+                String restaurantId = values[0].trim();
+                String foodItemName = values[2].trim();
+                double foodItemPrice = Double.parseDouble(values[1].trim());
+
+                restaurantData.putIfAbsent(restaurantId, new HashMap<>());
+                restaurantData.get(restaurantId).put(foodItemName, foodItemPrice);
+            }
+        } catch (IOException e) {
+            return "Error reading the file: " + e.getMessage();
+        } catch (NumberFormatException e) {
+            return "Error parsing price: " + e.getMessage();
+        }
+
+        // To store total price of food items for each restaurant
+        Map<String, Double> restaurantPrices = new HashMap<>();
+
+        // Check each restaurant for availability of all food items
+        for (Map.Entry<String, Map<String, Double>> entry : restaurantData.entrySet()) {
+            String restaurantId = entry.getKey();
+            Map<String, Double> foodItemsInRestaurant = entry.getValue();
+            boolean allItemsAvailable = true;
+            double totalPrice = 0.0;
+
+            for (String foodItem : foodItemsList) {
+                if (foodItemsInRestaurant.containsKey(foodItem)) {
+                    totalPrice += foodItemsInRestaurant.get(foodItem);
+                } else {
+                    allItemsAvailable = false;
+                    break;
+                }
+            }
+
+            // If all food items are available, store the total price
+            if (allItemsAvailable) {
+                restaurantPrices.put(restaurantId, totalPrice);
+            }
+        }
+
+        // Find the restaurant with the minimum total price
+        if (restaurantPrices.isEmpty()) {
+            return "No matching restaurant found";
+        }
+
+        String minRestaurantId = null;
+        double minTotalPrice = Double.MAX_VALUE;
+
+        for (Map.Entry<String, Double> entry : restaurantPrices.entrySet()) {
+            if (entry.getValue() < minTotalPrice) {
+                minTotalPrice = entry.getValue();
+                minRestaurantId = entry.getKey();
+            }
+        }
+
+        return "Restaurant ID: " + minRestaurantId + ", Total Price: " + String.format("%.2f", minTotalPrice);
+    }
+}

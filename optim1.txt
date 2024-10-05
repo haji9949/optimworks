@@ -1,0 +1,95 @@
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Scanner;
+
+public class FileSystem {
+
+    // Method to calculate total size of files in the specified subdirectory
+    public static String getTotalSize(Map<String, Object> fileSystem, String path) {
+        String[] directories = path.split("\\.");
+        int totalSize = calculateSize(fileSystem, directories, 0);
+
+        if (totalSize == -1) {
+            return "Directory not found.";
+        }
+        return "Total size: " + totalSize;
+    }
+
+    // Recursive method to calculate size
+    private static int calculateSize(Map<String, Object> currentDir, String[] directories, int index) {
+        if (index >= directories.length) {
+            return 0; // Reached end of path
+        }
+
+        String currentDirName = directories[index];
+        Object content = currentDir.get(currentDirName);
+
+        if (content == null) {
+            return -1; // Directory not found
+        }
+
+        if (content instanceof Integer) {
+            return (int) content; // It's a file, return its size
+        } else if (content instanceof Map) {
+            // It's a directory, go deeper
+            Map<String, Object> subDir = (Map<String, Object>) content;
+            int totalSize = 0;
+
+            for (Map.Entry<String, Object> entry : subDir.entrySet()) {
+                if (entry.getValue() instanceof Integer) {
+                    totalSize += (int) entry.getValue(); // Accumulate file sizes
+                } else if (entry.getValue() instanceof Map) {
+                    // Recursively calculate the size of subdirectories
+                    totalSize += calculateSize(subDir, directories, index + 1);
+                }
+            }
+            return totalSize; // Return accumulated size
+        }
+        return 0; // If it's an empty directory
+    }
+
+    // Recursive method to build the file system structure based on user input
+    private static void buildFileSystem(Map<String, Object> currentDir, Scanner scanner) {
+        System.out.print("Enter the name of the directory or file (or 'done' to finish): ");
+        String name = scanner.nextLine().trim();
+
+        if (name.equalsIgnoreCase("done")) {
+            return; // End of input
+        }
+
+        System.out.print("Is it a file? (yes/no): ");
+        String isFile = scanner.nextLine().trim().toLowerCase();
+
+        if (isFile.equals("yes")) {
+            System.out.print("Enter the size of the file: ");
+            int size = Integer.parseInt(scanner.nextLine().trim());
+            currentDir.put(name, size); // Add file with its size
+        } else {
+            // It's a directory, create a new subdirectory
+            Map<String, Object> subDir = new HashMap<>();
+            currentDir.put(name, subDir); // Add subdirectory
+            System.out.println("Entering directory: " + name);
+            buildFileSystem(subDir, scanner); // Recursively build the subdirectory
+        }
+
+        buildFileSystem(currentDir, scanner); // Continue building in the current directory
+    }
+
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        Map<String, Object> fileSystem = new HashMap<>();
+        Map<String, Object> rootDir = new HashMap<>();
+        fileSystem.put("root", rootDir);
+
+        System.out.println("Build the file system structure:");
+        buildFileSystem(rootDir, scanner); // Start building from the root directory
+
+        System.out.print("Enter the path to calculate total size (e.g., 'root.dir1.subdir1'): ");
+        String path = scanner.nextLine().trim();
+
+        // Get total size for the specified path
+        System.out.println(getTotalSize(fileSystem, path));
+
+        scanner.close(); // Close the scanner
+    }
+}
